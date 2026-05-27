@@ -1,0 +1,323 @@
+
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחשבון ריבית דריבית יומי</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom scrollbar for the table */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <div class="text-center space-y-2">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-900">מחשבון ריבית דריבית יומי</h1>
+            <p class="text-slate-500">חשב את צמיחת ההשקעה שלך על בסיס עסקאות עוקבות יומיות בדולרים ($)</p>
+        </div>
+
+        <!-- Inputs Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Input 1 -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2" for="principal">סכום התחלתי ($)</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">$</div>
+                        <input type="number" id="principal" value="10" min="1" step="any" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 pr-8 transition-colors">
+                    </div>
+                </div>
+                <!-- Input 2 -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2" for="profit">רווח לעסקה (%)</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">%</div>
+                        <input type="number" id="profit" value="2" min="0.01" step="any" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 pl-8 transition-colors">
+                    </div>
+                </div>
+                <!-- Input 3 -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2" for="trades">מספר עסקאות ביום</label>
+                    <input type="number" id="trades" value="21" min="1" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition-colors">
+                </div>
+                <!-- Input 4 -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2" for="days">מספר ימים</label>
+                    <input type="number" id="days" value="30" min="1" max="365" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition-colors">
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-blue-50 rounded-2xl p-6 border border-blue-100">
+                <p class="text-blue-600 text-sm font-semibold mb-1">סך הכל הופקד</p>
+                <h3 id="summary-principal" class="text-2xl font-bold text-blue-900">$10.00</h3>
+            </div>
+            <div class="bg-emerald-50 rounded-2xl p-6 border border-emerald-100 md:col-span-2 flex justify-between items-center">
+                <div>
+                    <p class="text-emerald-600 text-sm font-semibold mb-1">יתרת סיום משוערת</p>
+                    <h3 id="summary-total" class="text-3xl md:text-4xl font-bold text-emerald-900">$2,618,835.44</h3>
+                </div>
+                <div class="text-left hidden sm:block">
+                    <p class="text-emerald-600 text-sm font-semibold mb-1">סך הכל רווח</p>
+                    <h3 id="summary-profit" class="text-2xl font-bold text-emerald-800">$2,618,825.44</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            
+            <!-- Chart Container -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 sticky top-4">
+                <h2 class="text-lg font-bold text-slate-800 mb-4">גרף צמיחה</h2>
+                <div class="relative h-[300px] w-full">
+                    <canvas id="growthChart"></canvas>
+                </div>
+                <div class="mt-4 flex items-center justify-center space-x-4 space-x-reverse text-sm">
+                    <label class="flex items-center text-slate-600 cursor-pointer">
+                        <input type="checkbox" id="logScale" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 ml-2">
+                        הצג ציר Y לוגריתמי (מומלץ לצמיחה אקספוננציאלית)
+                    </label>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[400px]">
+                <div class="p-4 md:p-6 border-b border-slate-200 bg-slate-50">
+                    <h2 class="text-lg font-bold text-slate-800">פירוט יומי</h2>
+                </div>
+                <div class="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
+                    <table class="w-full text-sm text-right text-slate-500">
+                        <thead class="text-xs text-slate-700 uppercase bg-slate-100 sticky top-0 z-10">
+                            <tr>
+                                <th scope="col" class="px-6 py-3">יום</th>
+                                <th scope="col" class="px-6 py-3">יתרת סיום</th>
+                                <th scope="col" class="px-6 py-3">רווח יומי</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const elPrincipal = document.getElementById('principal');
+        const elProfit = document.getElementById('profit');
+        const elTrades = document.getElementById('trades');
+        const elDays = document.getElementById('days');
+        const elLogScale = document.getElementById('logScale');
+        
+        const elSumPrincipal = document.getElementById('summary-principal');
+        const elSumTotal = document.getElementById('summary-total');
+        const elSumProfit = document.getElementById('summary-profit');
+        const elTableBody = document.getElementById('table-body');
+
+        // Chart instance
+        let chartInstance = null;
+
+        // Number formatter for USD
+        const currencyFormatter = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+        // Main calculation and UI update function
+        function calculate() {
+            // Get inputs
+            const principal = parseFloat(elPrincipal.value) || 0;
+            const profitPerTrade = parseFloat(elProfit.value) || 0;
+            const tradesPerDay = parseInt(elTrades.value) || 0;
+            const days = parseInt(elDays.value) || 0;
+
+            if(principal <= 0 || profitPerTrade <= 0 || tradesPerDay <= 0 || days <= 0) return;
+
+            // Math
+            const tradeMultiplier = 1 + (profitPerTrade / 100);
+            const dailyMultiplier = Math.pow(tradeMultiplier, tradesPerDay);
+
+            let currentBalance = principal;
+            const labels = [];
+            const balanceData = [];
+            const dailyProfitData = [];
+            let tableHTML = '';
+
+            for (let day = 1; day <= days; day++) {
+                const startOfDay = currentBalance;
+                currentBalance = currentBalance * dailyMultiplier;
+                const dailyProfit = currentBalance - startOfDay;
+
+                labels.push(`יום ${day}`);
+                balanceData.push(currentBalance);
+                dailyProfitData.push(dailyProfit);
+
+                // Build table row
+                tableHTML += `
+                    <tr class="bg-white border-b hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4 font-medium text-slate-900">${day}</td>
+                        <td class="px-6 py-4 text-emerald-600 font-semibold">${currencyFormatter.format(currentBalance)}</td>
+                        <td class="px-6 py-4 text-blue-600">${currencyFormatter.format(dailyProfit)}</td>
+                    </tr>
+                `;
+            }
+
+            // Update Summary
+            const totalProfit = currentBalance - principal;
+            elSumPrincipal.textContent = currencyFormatter.format(principal);
+            elSumTotal.textContent = currencyFormatter.format(currentBalance);
+            elSumProfit.textContent = currencyFormatter.format(totalProfit);
+
+            // Update Table
+            elTableBody.innerHTML = tableHTML;
+
+            // Update Chart
+            updateChart(labels, balanceData, dailyProfitData);
+        }
+
+        // Chart Drawing Function
+        function updateChart(labels, balanceData, dailyProfitData) {
+            const ctx = document.getElementById('growthChart').getContext('2d');
+            const useLogScale = elLogScale.checked;
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'יתרת סיום',
+                            data: balanceData,
+                            borderColor: '#10b981', // emerald-500
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 2,
+                            fill: true,
+                            tension: 0.3,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'רווח יומי',
+                            data: dailyProfitData,
+                            borderColor: '#3b82f6', // blue-500
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.3,
+                            yAxisID: 'y'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            rtl: true,
+                            labels: {
+                                font: { family: 'system-ui' }
+                            }
+                        },
+                        tooltip: {
+                            textDirection: 'rtl',
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += currencyFormatter.format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                font: { family: 'system-ui' }
+                            }
+                        },
+                        y: {
+                            type: useLogScale ? 'logarithmic' : 'linear',
+                            display: true,
+                            position: 'right',
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    if (useLogScale) {
+                                        // Filter to only show specific powers of 10 for log scale clarity
+                                        if (value === 10 || value === 100 || value === 1000 || value === 10000 || value === 100000 || value === 1000000 || value === 10000000) {
+                                            return currencyFormatter.format(value);
+                                        }
+                                        return '';
+                                    }
+                                    // For numbers > 1M, format compactly
+                                    if(value >= 1000000) return '$' + (value/1000000).toFixed(1) + 'M';
+                                    if(value >= 1000) return '$' + (value/1000).toFixed(1) + 'k';
+                                    return currencyFormatter.format(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Event Listeners for inputs
+        const inputs = [elPrincipal, elProfit, elTrades, elDays, elLogScale];
+        inputs.forEach(input => {
+            input.addEventListener('input', calculate);
+        });
+
+        // Initial Calculation
+        calculate();
+    </script>
+</body>
+</html>
